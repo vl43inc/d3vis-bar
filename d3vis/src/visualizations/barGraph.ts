@@ -41,10 +41,37 @@ const vis: BarGraph = {
 
             display: 'radio',
 
-            default: 'large'
+            default: '95CI'
 
+        },
+        // orientation: {
+
+        //     type: 'string',
+
+        //     label: 'Orientation',
+
+        //     values: [
+        //         {"Horizontal": 'horizontal'}, 
+        //         {"Vertical": 'vertical'}
+        //     ],
+
+        //     display: 'radio',
+
+        //     default: 'horizontal'
+
+        // },
+        userSetMin: {
+
+            type: 'number',
+            label: 'Axis Minimum',
+            display: 'number',
+        },
+        userSetMax: {
+
+            type: 'number',
+            label: 'Axis Maximum',
+            display: 'number',
         }
-        //add option for median instead of mean here? 
 
     },
 
@@ -94,8 +121,6 @@ const vis: BarGraph = {
             }
             console.log("formattedData", formattedData) //map of data field name to array of data
             
-            //calculate standard dev
-
             const width = element.clientWidth
             const height = element.clientHeight
 
@@ -114,10 +139,7 @@ const vis: BarGraph = {
             const categoricalData = formattedData.get(categorical)
             const categoricalUnique = [...new Set(formattedData.get(categorical))]
             const averages = [];
-            let zstar = 1.96;
-            if (config.errorBars === '95CI') zstar = 1.960
-            if (config.errorBars === '90CI') zstar = 1.645
-            if(config.errorBars === '99CI') zstar = 2.576
+            
             for (const catName of categoricalUnique){
                 let catData = []
                 for (let i=0; i<numberData.length; i++){
@@ -126,11 +148,29 @@ const vis: BarGraph = {
                     }
                 }
                 let n = catData.length
+                const mean = d3.mean(catData)  
                 const std = getStandardDeviation(catData)
-                const mean = d3.mean(catData)                
-                const CIlowerBound = mean - zstar*std/Math.sqrt(n)
-                const CIupperBound = mean + zstar*std/Math.sqrt(n)
-                averages.push({category:catName, average: mean, std:std, CIlowerBound: CIlowerBound, CIupperBound:CIupperBound, n:n})
+                let lowerBound:number;
+                let upperBound:number;              
+                switch(config.errorBars) {
+                    case "95CI": {
+                        lowerBound = mean - 1.96*std/Math.sqrt(n);
+                        upperBound = mean + 1.96*std/Math.sqrt(n);
+                        break;}
+                    case "90CI": {
+                        lowerBound = mean - 1.645*std/Math.sqrt(n);
+                        upperBound = mean + 1.645*std/Math.sqrt(n);
+                        break;}
+                    case "99CI": {
+                        lowerBound = mean - 2.576*std/Math.sqrt(n);
+                        upperBound = mean + 2.576*std/Math.sqrt(n);
+                        break;}
+                    case "std": {
+                        lowerBound = mean - std;
+                        upperBound = mean + std;
+                        break;}
+                }
+                averages.push({category:catName, average: mean, std:std, lowerBound: lowerBound, upperBound:upperBound, n:n})
             }
             console.log("averages", averages)
             console.log(categoricalUnique)
@@ -148,6 +188,9 @@ const vis: BarGraph = {
             .style('font', '12px times')
             .style("padding", "10px")
 
+
+
+            //if (config.orientation === 'horizontal'){
             //make axes labels
             svg.append("text")
             .attr("class", "x label")
@@ -166,19 +209,26 @@ const vis: BarGraph = {
             .text(allFieldsLabel[2])
 
 
-            const margin = 30;
+            const widthMargin = 30;
+            const heightMargin = 40;
             const g = svg.append('g')
+            
 
+            //auto-sets axisMin/Max based on range, adjusts for user input
+            let axisMin = d3.min(numberData) - (d3.max(numberData) - d3.min(numberData))*0.1
+            let axisMax = d3.max(numberData) + (d3.max(numberData) - d3.min(numberData))*0.1
+            if (config.userSetMax !== undefined && config.userSetMax !== null) axisMax = config.userSetMax;
+            if (config.userSetMin !== undefined && config.userSetMin !== null) axisMin = config.userSetMin;
             // Create scale
             const yscale = d3.scaleLinear()
-            .domain([0, d3.max(numberData)])
-            .range([height-40, 0]);
+            .domain([axisMin, axisMax])
+            .range([height-heightMargin, 0]);
 
             // Add scales to axis
             let y_axis = d3.axisLeft()
                 .scale(yscale);
 
-            let xScale = d3.scaleBand().range ([0, width-margin]).domain(categoricalUnique.map((c)=> c)).padding(0.4)
+            let xScale = d3.scaleBand().range ([0, width-widthMargin]).domain(categoricalUnique.map((c)=> c)).padding(0.4)
             let x_axis = d3.axisBottom().scale(xScale)
             
             //Append group and insert axis
@@ -187,7 +237,7 @@ const vis: BarGraph = {
             .call(y_axis);
 
             g.append("g")
-            .attr("transform", "translate(50, "+(height - 40)+")")
+            .attr("transform", "translate(50, "+(height - heightMargin)+")")
             .call(x_axis);
 
             
@@ -210,7 +260,7 @@ const vis: BarGraph = {
                 .style('top', (event.pageY+10) + 'px')
                 }
 
-
+            console.log("hello")
             //make bar graphs
             g.selectAll(".bar")
             .data(averages)
@@ -219,14 +269,14 @@ const vis: BarGraph = {
             .attr("x", function(d) { return xScale(d.category)+50; })
             .attr("y", function(d) { return yscale(d.average); })
             .attr("width", xScale.bandwidth())
-            .attr("height", function(d) { return height - 40 - yscale(d.average); })
+            .attr("height", function(d) { return height - heightMargin - yscale(d.average); })
             .attr('fill', '#33658A')
             .on('mousemove', mousemove)
             .on('mouseover', mouseover)
             .on('mouseleave', mouseleave)
 
-            //make standard dev error bars
-            if (config.errorBars === 'std'){
+            
+            
             g
             .selectAll("vertLines")
             .data(averages)
@@ -234,12 +284,12 @@ const vis: BarGraph = {
             .append("line")
               .attr("x1", function(d){return xScale(d.category)+50 + xScale.bandwidth()/2;})
               .attr("x2", function(d){return xScale(d.category)+50 + xScale.bandwidth()/2;})
-              .attr("y1", function(d){return yscale(d.average + d.std)})
-              .attr("y2", function(d){return yscale(d.average - d.std)})
+              .attr("y1", function(d){return yscale(d.lowerBound)})
+              .attr("y2", function(d){return yscale(d.upperBound)})
               .attr("stroke", "black")
               .style("width", 40)
 
-
+            console.log("no here")
               g
               .selectAll("horLinesTop")
               .data(averages)
@@ -247,11 +297,11 @@ const vis: BarGraph = {
               .append("line")
                 .attr("x1", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2- Math.min(xScale.bandwidth()/4, 50);})
                 .attr("x2", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2+ Math.min(xScale.bandwidth()/4, 50);})
-                .attr("y1", function(d){return yscale(d.average + d.std)})
-                .attr("y2", function(d){return yscale(d.average + d.std)})
+                .attr("y1", function(d){return yscale(d.upperBound)})
+                .attr("y2", function(d){return yscale(d.upperBound)})
                 .attr("stroke", "black")
                 .style("width", 40)
-
+            console.log("actually here")
             g
             .selectAll("horLinesBottom")
             .data(averages)
@@ -259,54 +309,10 @@ const vis: BarGraph = {
             .append("line")
                 .attr("x1", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2- Math.min(xScale.bandwidth()/4, 50);})
                 .attr("x2", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2+ Math.min(xScale.bandwidth()/4, 50);})
-                .attr("y1", function(d){return yscale(d.average - d.std)})
-                .attr("y2", function(d){return yscale(d.average - d.std)})
+                .attr("y1", function(d){return yscale(d.lowerBound)})
+                .attr("y2", function(d){return yscale(d.lowerBound)})
                 .attr("stroke", "black")
                 .style("width", 40)
-            
-            }
-            
-            //make confidence interval error bars
-            if (config.errorBars === '95CI' || config.errorBars === '90CI' || config.errorBars === '99CI'){
-            g
-            .selectAll("vertLines")
-            .data(averages)
-            .enter()
-            .append("line")
-              .attr("x1", function(d){return xScale(d.category)+50 + xScale.bandwidth()/2;})
-              .attr("x2", function(d){return xScale(d.category)+50 + xScale.bandwidth()/2;})
-              .attr("y1", function(d){return yscale(d.CIupperBound)})
-              .attr("y2", function(d){return yscale(d.CIlowerBound)})
-              .attr("stroke", "black")
-              .style("width", 40)
-
-
-              g
-              .selectAll("horLinesTop")
-              .data(averages)
-              .enter()
-              .append("line")
-                .attr("x1", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2- Math.min(xScale.bandwidth()/4, 50);})
-                .attr("x2", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2+ Math.min(xScale.bandwidth()/4, 50);})
-                .attr("y1", function(d){return yscale(d.CIupperBound)})
-                .attr("y2", function(d){return yscale(d.CIupperBound)})
-                .attr("stroke", "black")
-                .style("width", 40)
-
-            g
-            .selectAll("horLinesBottom")
-            .data(averages)
-            .enter()
-            .append("line")
-                .attr("x1", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2- Math.min(xScale.bandwidth()/4, 50);})
-                .attr("x2", function(d){return xScale(d.category)+50  + xScale.bandwidth()/2+ Math.min(xScale.bandwidth()/4, 50);})
-                .attr("y1", function(d){return yscale(d.CIlowerBound)})
-                .attr("y2", function(d){return yscale(d.CIlowerBound)})
-                .attr("stroke", "black")
-                .style("width", 40)
-
-
-            }
 
         }
 

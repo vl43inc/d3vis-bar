@@ -192,13 +192,13 @@ const vis: BarGraph = {
 
             //if (config.orientation === 'horizontal'){
             //make axes labels
-            svg.append("text")
+            let xlabel = svg.append("text")
             .attr("class", "x label")
             .attr("text-anchor", "end")
             .attr("x", width)
             .attr("y", height-6)
             .text(allFieldsLabel[1])
-            .style("padding", "10px");
+            .style("padding", "1px");
 
             svg.append("text")
             .attr("class", "y label")
@@ -210,7 +210,7 @@ const vis: BarGraph = {
 
 
             const widthMargin = 30;
-            const heightMargin = 40;
+            const heightMargin = 55;//make this adjustable?
             const g = svg.append('g')
             
 
@@ -238,9 +238,24 @@ const vis: BarGraph = {
 
             g.append("g")
             .attr("transform", "translate(50, "+(height - heightMargin)+")")
-            .call(x_axis);
+            .call(x_axis)
+            .selectAll(".tick text")
+            .call(wrap, xScale.bandwidth()*1.6);
 
-            
+            svg.append("rect")
+            .attr("x", xlabel.node().getBBox().x)
+            .attr("y", xlabel.node().getBBox().y)
+            .attr("width", xlabel.node().getBBox().width)
+            .attr("height", xlabel.node().getBBox().width)
+            .attr("fill", 'white')
+            svg.append("text")
+            .attr("class", "x label")
+            .attr("text-anchor", "end")
+            .attr("x", width)
+            .attr("y", height-6)
+            .text(allFieldsLabel[1])
+            .style("padding", "1px");
+
             //create functions for hover tooltip
             const mouseover = (event, d) => {
                 console.log('pagex', event.pageX)
@@ -254,13 +269,12 @@ const vis: BarGraph = {
         
               const mousemove = (event, d) => {
                 console.log("this is working")
-                tooltip.html(`Num Measurements: ${d.n}`+ "<br/>" + `Mean: ${Math.round(d.average*100)/100}`);
+                tooltip.html(`${d.category}`+ "<br/>"+`Num Measurements: ${d.n}`+ "<br/>" + `Mean: ${Math.round(d.average*100)/100}`);
                 d3.select('#tooltip')
                 .style('left', (event.pageX+10) + 'px')
                 .style('top', (event.pageY+10) + 'px')
                 }
 
-            console.log("hello")
             //make bar graphs
             g.selectAll(".bar")
             .data(averages)
@@ -313,6 +327,30 @@ const vis: BarGraph = {
                 .attr("y2", function(d){return yscale(d.lowerBound)})
                 .attr("stroke", "black")
                 .style("width", 40)
+
+        function wrap(text, width) {
+            text.each(function() {
+                var text = d3.select(this),
+                    words = text.text().split(/\s+/).reverse(),
+                    word,
+                    line = [],
+                    lineNumber = 0,
+                    lineHeight = 1.1, // ems
+                    y = text.attr("y"),
+                    dy = parseFloat(text.attr("dy")),
+                    tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em")
+                while (word = words.pop()) {
+                line.push(word)
+                tspan.text(line.join(" "))
+                if (tspan.node().getComputedTextLength() > width) {
+                    line.pop()
+                    tspan.text(line.join(" "))
+                    line = [word]
+                    tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", `${++lineNumber * lineHeight + dy}em`).text(word)
+                }
+                }
+            })
+        }
 
         }
 

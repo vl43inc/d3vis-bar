@@ -71,6 +71,11 @@ const vis: BarGraph = {
             type: 'number',
             label: 'Axis Maximum',
             display: 'number',
+        }, 
+        zeroline: {
+            type: 'boolean',
+            label: "Add Line at Zero",
+            default: false
         }
 
     },
@@ -328,6 +333,16 @@ const vis: BarGraph = {
                 .attr("stroke", "black")
                 .style("width", 40)
 
+
+        if (config.zeroline === true){
+            g.append("line")
+            .attr("x1", 50)
+            .attr("x2", width-widthMargin)
+            .attr("y1", yscale(0))
+            .attr("y2", yscale(0))
+            .attr("stroke", "black")
+            .style("width", 100)
+        }
         function wrap(text, width) {
             text.each(function() {
                 var text = d3.select(this),

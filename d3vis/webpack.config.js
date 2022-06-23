@@ -3,7 +3,7 @@ const TerserJSPlugin = require('terser-webpack-plugin');
 
 let webpackConfig = {
     entry: {
-        bargraph: './src/visualizations/barGraph.ts'
+        bargraph: './src/visualizations/barGraph.ts'//switch to bargraph before committing, newViz after
     },
     output: {
         filename: '[name].js',

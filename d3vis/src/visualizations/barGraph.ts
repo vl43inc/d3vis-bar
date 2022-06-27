@@ -76,6 +76,11 @@ const vis: BarGraph = {
             type: 'boolean',
             label: "Add Line at Zero",
             default: false
+        },
+        groupColors: {
+            type: 'array',
+            label: 'Group Colors',
+            display: 'colors'
         }
 
     },
@@ -117,6 +122,7 @@ const vis: BarGraph = {
         });
 
         if (errors) { // errors === true means no errors
+            const colors = config.groupColors
             const allFields = queryResponse.fields.dimensions.map((dim)=> dim.name)
             const allFieldsLabel = queryResponse.fields.dimensions.map((dim)=> dim.label_short)
             console.log("allFields", allFields) //gets names of each field
@@ -144,8 +150,9 @@ const vis: BarGraph = {
             const categoricalData = formattedData.get(categorical)
             const categoricalUnique = [...new Set(formattedData.get(categorical))]
             const averages = [];
-            
+            let colorIndex = 0
             for (const catName of categoricalUnique){
+                const color = colors[colorIndex]
                 let catData = []
                 for (let i=0; i<numberData.length; i++){
                     if (categoricalData[i] === catName){
@@ -175,7 +182,8 @@ const vis: BarGraph = {
                         upperBound = mean + std;
                         break;}
                 }
-                averages.push({category:catName, average: mean, std:std, lowerBound: lowerBound, upperBound:upperBound, n:n})
+                averages.push({category:catName, average: mean, std:std, lowerBound: lowerBound, upperBound:upperBound, n:n, color:color})
+                colorIndex = (colorIndex+ 1)%colors.length
             }
             console.log("averages", averages)
             console.log(categoricalUnique)
@@ -289,7 +297,7 @@ const vis: BarGraph = {
             .attr("y", function(d) { return yscale(d.average); })
             .attr("width", xScale.bandwidth())
             .attr("height", function(d) { return height - heightMargin - yscale(d.average); })
-            .attr('fill', '#33658A')
+            .attr("fill", function(d) {return d.color})
             .on('mousemove', mousemove)
             .on('mouseover', mouseover)
             .on('mouseleave', mouseleave)

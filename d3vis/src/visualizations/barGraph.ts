@@ -122,7 +122,7 @@ const vis: BarGraph = {
         });
 
         if (errors) { // errors === true means no errors
-            const colors = config.groupColors
+            const colors = config.groupColors ?? ['#015836', '#33658A', '#86BBD8', '#779B59', '#A7C957', '#F8BD4F', '#C76228','#8C4843', '#9E643C', '#AF929D']
             const allFields = queryResponse.fields.dimensions.map((dim)=> dim.name)
             const allFieldsLabel = queryResponse.fields.dimensions.map((dim)=> dim.label_short)
             console.log("allFields", allFields) //gets names of each field

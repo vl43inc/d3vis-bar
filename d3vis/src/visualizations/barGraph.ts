@@ -81,6 +81,12 @@ const vis: BarGraph = {
             type: 'array',
             label: 'Group Colors',
             display: 'colors'
+        },
+        tickSize: {
+            type: 'number',
+            label: 'Tick Size',
+            display: 'number',
+            default: 10
         }
 
     },
@@ -205,25 +211,28 @@ const vis: BarGraph = {
 
             //if (config.orientation === 'horizontal'){
             //make axes labels
+            const widthMargin = 30;
+            const heightMargin = 55;//make this adjustable?
+
             let xlabel = svg.append("text")
             .attr("class", "x label")
-            .attr("text-anchor", "end")
-            .attr("x", width)
+            .attr("text-anchor", "middle")
+            .attr("x", width/2)
             .attr("y", height-6)
             .text(allFieldsLabel[1])
             .style("padding", "1px");
 
             svg.append("text")
             .attr("class", "y label")
-            .attr("text-anchor", "end")
-            .attr("y", 6)
-            .attr("dy", ".75em")
             .attr("transform", "rotate(-90)")
+            .attr("y", 0)
+            .attr("x",-((height-heightMargin) / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
             .text(allFieldsLabel[2])
 
 
-            const widthMargin = 30;
-            const heightMargin = 55;//make this adjustable?
+            
             const g = svg.append('g')
             
 
@@ -253,7 +262,8 @@ const vis: BarGraph = {
             .attr("transform", "translate(50, "+(height - heightMargin)+")")
             .call(x_axis)
             .selectAll(".tick text")
-            .call(wrap, xScale.bandwidth()*1.6);
+            .call(wrap, xScale.bandwidth()*1.6)
+            .attr("font-size", config.tickSize ?? 10);
 
             svg.append("rect")
             .attr("x", xlabel.node().getBBox().x)
@@ -263,8 +273,8 @@ const vis: BarGraph = {
             .attr("fill", 'white')
             svg.append("text")
             .attr("class", "x label")
-            .attr("text-anchor", "end")
-            .attr("x", width)
+            .attr("text-anchor", "middle")
+            .attr("x", width/2)
             .attr("y", height-6)
             .text(allFieldsLabel[1])
             .style("padding", "1px");
